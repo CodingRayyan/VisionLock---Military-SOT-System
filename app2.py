@@ -26,14 +26,44 @@ h1 { color: #FFD700; text-align: center; }
 """, unsafe_allow_html=True)
 
 # ===================== SIDEBAR =====================
+withst.markdown("""
+<style>
+[data-testid="stSidebar"] {
+    background-color: rgba(0, 0.7, 0, 0.6);
+    color: white;
+}
+[data-testid="stSidebar"] h1, h2, h3 { color: #00BFFF; }
+::-webkit-scrollbar-thumb { background: #FFD700; border-radius: 10px; }
+</style>
+""", unsafe_allow_html=True)
+
 with st.sidebar.expander("📌 Project Intro"):
     st.markdown("""
-- Single-object military tracking  
-- Manual ROI initialization  
-- Adaptive template matching  
-- Real-time target lock visualization  
-- Exportable tracking video + metrics  
+    - Perform **single-object military target tracking** in video streams  
+    - Initialize tracking using a **manual bounding box (ROI)**  
+    - Apply **adaptive template matching** for robust frame-to-frame tracking  
+    - Visualize **target lock indicators** (bounding box, crosshair, aim circle)  
+    - Export the **processed tracking video** for analysis or portfolio use  
+    """)
+
+with st.sidebar.expander("👨‍💻 Developers Name-ID"):
+    st.markdown("""
+    - **Rayyan Ahmed: 22F-BSAI-11**
+    - **Agha Harris: 22F-BSAI-27** 
+    - **Irtat Mobin: 22F-BSAI-29**  
+    - **Omaid Ejaz: 22F-BSAI-45**  
+    - **Wajhi Qureshi: 22F-BSAI-50**
+    """)
+
+with st.sidebar.expander("🛠️ Tech Stack Used"):
+    st.markdown("""
+- 🎯 **OpenCV (Template Matching)** → Core object tracking using adaptive correlation methods  
+- 🖼️ **OpenCV Video I/O** → Frame decoding, drawing overlays, MP4 encoding  
+- ⚙️ **NumPy** → Pixel-level operations and array manipulation  
+- 🌐 **Streamlit** → Interactive UI for video upload, ROI input, and results display  
+- 🧪 **Python Standard Libraries** → Time measurement, file handling, temporary storage  
 """)
+
 
 # ===================== UPLOAD =====================
 uploaded_video = st.file_uploader("Upload video", type=["mp4", "avi", "mov"])
@@ -173,3 +203,4 @@ if uploaded_video and start_btn:
             file_name=filename,
             mime="video/mp4"
         )
+
