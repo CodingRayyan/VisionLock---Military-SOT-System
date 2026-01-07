@@ -6,14 +6,10 @@ import os
 import tempfile
 import matplotlib.pyplot as plt
 
-# =================================================
-# Streamlit UI
-# =================================================
 st.set_page_config(page_title="Template-Based Tank Tracker", layout="centered")
 st.title("🎯 Military Object Tracking (Template Matching)")
 st.write("Upload a video, provide initial bounding box, and get the tracked output.")
 
-# ---------------- Background ----------------
 st.markdown("""
 <style>
 .stApp {
@@ -29,7 +25,6 @@ h1 { color: #FFD700; text-align: center; }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- Sidebar Styling ----------------
 st.markdown("""
 <style>
 [data-testid="stSidebar"] {
@@ -41,7 +36,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- Sidebar Info ----------------
 with st.sidebar.expander("📌 Project Intro"):
     st.markdown("""
     - Perform **single-object military target tracking** in video streams  
@@ -73,13 +67,10 @@ with st.sidebar.expander("🛠️ Tech Stack Used"):
 
 uploaded_video = st.file_uploader("Upload video", type=["mp4", "avi", "mov"])
 
-# =================================================
-# Preview First Frame with Grid & Axes
-# =================================================
+
 if uploaded_video:
     st.subheader("📐 First Frame Reference (Use this to set Bounding Box)")
 
-    # Save uploaded video temporarily
     temp_vid = tempfile.NamedTemporaryFile(delete=False)
     temp_vid.write(uploaded_video.read())
     temp_vid.close()
@@ -95,12 +86,10 @@ if uploaded_video:
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.imshow(frame0_rgb)
 
-        # Axis setup
         ax.set_xlabel("X (pixels)")
         ax.set_ylabel("Y (pixels)")
         ax.set_title("First Frame with Pixel Grid")
 
-        # Grid every 50 pixels
         ax.set_xticks(np.arange(0, w_img, 50))
         ax.set_yticks(np.arange(0, h_img, 50))
         ax.grid(color="yellow", linestyle="--", linewidth=0.5, alpha=0.6)
@@ -115,7 +104,6 @@ if uploaded_video:
     else:
         st.error("Could not read first frame from video.")
 
-# ---------------- Bounding Box Input ----------------
 st.subheader("Initial Bounding Box (pixels)")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -127,7 +115,6 @@ with col3:
 with col4:
     h = st.number_input("height", min_value=10, value=150)
 
-# ---------------- Output filename ----------------
 user_filename = st.text_input(
     "Enter output file name (without extension):",
     value="tracked_video"
@@ -135,9 +122,6 @@ user_filename = st.text_input(
 
 start_btn = st.button("🚀 Start Tracking")
 
-# =================================================
-# Tracking function
-# =================================================
 def run_tracker(video_path, bbox, video_out_path):
     search_expansion = 80
     confidence_thr = 0.55
@@ -245,16 +229,12 @@ def run_tracker(video_path, bbox, video_out_path):
     out.release()
     return video_out_path
 
-# =================================================
-# Execution
-# =================================================
 if uploaded_video and start_btn:
-    # Ensure proper .mp4 extension
+
     download_name = user_filename.strip()
     if not download_name.endswith(".mp4"):
         download_name += ".mp4"
 
-    # Full temp path using user filename
     video_out_path = os.path.join(tempfile.gettempdir(), download_name)
 
     with st.spinner("Processing video..."):
@@ -266,7 +246,6 @@ if uploaded_video and start_btn:
 
     st.success(f"Tracking completed successfully! Output file: {download_name}")
 
-    # Download button
     with open(output_path, "rb") as f:
         st.download_button(
             label="⬇ Download Output Video",
@@ -276,3 +255,4 @@ if uploaded_video and start_btn:
         )
 
     st.code(f"Output saved at:\n{output_path}")
+
