@@ -7,8 +7,8 @@ import tempfile
 import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Template-Based Tank Tracker", layout="centered")
-st.title("🎯 VisionLock - Militart SOT System")
-st.markdown("Single Object Tracking System - Military Grade")
+st.title("🎯 VisionLock - Military SOT System")
+st.markdown("🤖 Single Object Tracking System - Military Grade")
 st.write("Upload a video, provide initial bounding box, and get the tracked output.")
 
 st.markdown("""
@@ -256,6 +256,7 @@ if uploaded_video and start_btn:
         )
 
     st.code(f"Output saved at:\n{output_path}")
+
 
 
 
