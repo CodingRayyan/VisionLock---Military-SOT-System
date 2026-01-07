@@ -5,14 +5,11 @@ import time
 import os
 import tempfile
 
-# =================================================
-# Streamlit UI
-# =================================================
+
 st.set_page_config(page_title="Template-Based Tank Tracker", layout="centered")
 st.title("🎯 Military Object Tracking (Template Matching)")
 st.write("Upload a video, provide initial bounding box, and get the tracked output.")
 
-# ---------------- Background ----------------
 st.markdown("""
 <style>
 .stApp {
@@ -30,7 +27,6 @@ h1 { color: #FFD700; text-align: center; }
 
 #############################################
 
-# ---------------- Sidebar Styling ----------------
 st.markdown("""
 <style>
 [data-testid="stSidebar"] {
@@ -42,7 +38,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- Sidebar Info ----------------
 with st.sidebar.expander("📌 Project Intro"):
     st.markdown("""
     - Perform **single-object military target tracking** in video streams  
@@ -78,13 +73,9 @@ uploaded_video = st.file_uploader("Upload video", type=["mp4", "avi", "mov"])
 
 import matplotlib.pyplot as plt
 
-# =================================================
-# Preview First Frame with Grid & Axes
-# =================================================
 if uploaded_video:
     st.subheader("📐 First Frame Reference (Use this to set Bounding Box)")
 
-    # Save uploaded video temporarily
     temp_vid = tempfile.NamedTemporaryFile(delete=False)
     temp_vid.write(uploaded_video.read())
     temp_vid.close()
@@ -100,7 +91,6 @@ if uploaded_video:
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.imshow(frame0_rgb)
 
-        # Axis setup
         ax.set_xlabel("X (pixels)")
         ax.set_ylabel("Y (pixels)")
         ax.set_title("First Frame with Pixel Grid")
@@ -110,8 +100,6 @@ if uploaded_video:
         ax.set_yticks(np.arange(0, h_img, 50))
         ax.grid(color="yellow", linestyle="--", linewidth=0.5, alpha=0.6)
 
-        # Invert Y-axis to match OpenCV coordinate system
-        #ax.invert_yaxis()
         ax.imshow(frame0_rgb, origin="upper")
 
         st.pyplot(fig)
@@ -144,14 +132,10 @@ download_name = user_filename.strip()
 if not download_name.endswith(".mp4"):
     download_name += ".mp4"
 
-# Full temp path using user filename
 video_out_path = os.path.join(tempfile.gettempdir(), download_name)
 
 start_btn = st.button("🚀 Start Tracking")
 
-# =================================================
-# Tracking Logic
-# =================================================
 def run_tracker(video_path, bbox, video_out_path):
 
     search_expansion = 80
@@ -264,14 +248,12 @@ def run_tracker(video_path, bbox, video_out_path):
     out.release()
     return video_out_path
 
-# =================================================
-# Execution
-# =================================================
+
 if uploaded_video and start_btn:
     with st.spinner("Processing video..."):
-        # Use the same temp file created for first-frame preview
+        
         output_path = run_tracker(
-            temp_vid.name,   # ✅ previously saved temporary file
+            temp_vid.name,   
             bbox=(x, y, w, h)
         )
 
@@ -281,7 +263,6 @@ if uploaded_video and start_btn:
     if not download_name.endswith(".mp4"):
         download_name += ".mp4"
 
-    # Download button
     with open(output_path, "rb") as f:
         st.download_button(
             label="⬇ Download Output Video",
@@ -291,5 +272,6 @@ if uploaded_video and start_btn:
         )
 
     st.code(f"Output saved at:\n{output_path}")
+
 
        
