@@ -26,7 +26,7 @@ h1 { color: #FFD700; text-align: center; }
 """, unsafe_allow_html=True)
 
 # ===================== SIDEBAR =====================
-withst.markdown("""
+st.markdown("""
 <style>
 [data-testid="stSidebar"] {
     background-color: rgba(0, 0.7, 0, 0.6);
@@ -203,4 +203,5 @@ if uploaded_video and start_btn:
             file_name=filename,
             mime="video/mp4"
         )
+
 
