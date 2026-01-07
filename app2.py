@@ -6,18 +6,23 @@ import os
 import tempfile
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="VisionLock - Military SOT", layout="centered")
-st.title("🎯 VisionLock - Military SOT System")
-st.markdown("🤖 Single Object Tracking System - Military Grade")
+st.set_page_config(page_title="VisionLock | Military Single Object Tracking System", layout="centered")
+st.title("🎯 VisionLock: Military-Grade Single Object Tracking System")
+st.markdown("""
+**VisionLock** is a real-time computer vision system designed for  
+**precision tracking of military ground targets** using adaptive template matching.
+""")
+
 st.write("Upload a video, provide initial bounding box, and get the tracked output.")
 
-# ===================== STYLING =====================
 st.markdown("""
 <style>
 .stApp {
-    background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)),
-    url("https://policy-wire.com/wp-content/uploads/2025/05/Pakistan-Day-Parade.jpg");
+    background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+                      url("https://policy-wire.com/wp-content/uploads/2025/05/Pakistan-Day-Parade.jpg");
     background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     background-attachment: fixed;
     color: white;
 }
@@ -25,7 +30,6 @@ h1 { color: #FFD700; text-align: center; }
 </style>
 """, unsafe_allow_html=True)
 
-# ===================== SIDEBAR =====================
 st.markdown("""
 <style>
 [data-testid="stSidebar"] {
@@ -64,12 +68,14 @@ with st.sidebar.expander("🛠️ Tech Stack Used"):
 - 🧪 **Python Standard Libraries** → Time measurement, file handling, temporary storage  
 """)
 
+#############################################
 
-# ===================== UPLOAD =====================
 uploaded_video = st.file_uploader("Upload video", type=["mp4", "avi", "mov"])
 
-# ===================== PREVIEW =====================
+
 if uploaded_video:
+    st.subheader("📐 First Frame Reference (Use this to set Bounding Box)")
+
     temp_vid = tempfile.NamedTemporaryFile(delete=False)
     temp_vid.write(uploaded_video.read())
     temp_vid.close()
@@ -80,25 +86,51 @@ if uploaded_video:
 
     if ret:
         frame0_rgb = cv2.cvtColor(frame0, cv2.COLOR_BGR2RGB)
+        h_img, w_img, _ = frame0_rgb.shape
+
         fig, ax = plt.subplots(figsize=(10, 6))
+        ax.imshow(frame0_rgb)
+
+        ax.set_xlabel("X (pixels)")
+        ax.set_ylabel("Y (pixels)")
+        ax.set_title("First Frame with Pixel Grid")
+
+        ax.set_xticks(np.arange(0, w_img, 50))
+        ax.set_yticks(np.arange(0, h_img, 50))
+        ax.grid(color="yellow", linestyle="--", linewidth=0.5, alpha=0.6)
         ax.imshow(frame0_rgb, origin="upper")
-        ax.grid(True, linestyle="--", alpha=0.5)
+
         st.pyplot(fig)
 
-# ===================== ROI INPUT =====================
-st.subheader("Initial Bounding Box (pixels)")
-x = st.number_input("x", min_value=0, value=100)
-y = st.number_input("y", min_value=0, value=100)
-w = st.number_input("width", min_value=10, value=150)
-h = st.number_input("height", min_value=10, value=150)
+        st.info(
+            "🧭 Tip: Use this grid to estimate **x, y, width, height** values accurately.\n"
+            "Coordinates start from **top-left (0,0)** like OpenCV."
+        )
+    else:
+        st.error("Could not read first frame from video.")
 
-user_filename = st.text_input("Output filename:", value="tracked_video")
+st.subheader("Initial Bounding Box (pixels)")
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    x = st.number_input("x", min_value=0, value=100)
+with col2:
+    y = st.number_input("y", min_value=0, value=100)
+with col3:
+    w = st.number_input("width", min_value=10, value=150)
+with col4:
+    h = st.number_input("height", min_value=10, value=150)
+
+user_filename = st.text_input(
+    "Enter output file name (without extension):",
+    value="tracked_video"
+)
+
 start_btn = st.button("🚀 Start Tracking")
 
-# ===================== TRACKER =====================
 def run_tracker(video_path, bbox, video_out_path):
     search_expansion = 80
     confidence_thr = 0.55
+    update_every_n = 10
 
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -119,20 +151,29 @@ def run_tracker(video_path, bbox, video_out_path):
     x, y, w, h = bbox
     template = cv2.cvtColor(first_frame[y:y+h, x:x+w], cv2.COLOR_BGR2GRAY)
 
-    method = cv2.TM_CCOEFF_NORMED
+    def choose_method(tmpl):
+        mean, std = cv2.meanStdDev(tmpl)
+        mean, std = float(mean), float(std)
+        if std < 140:
+            m = cv2.TM_CCOEFF_NORMED
+        else:
+            m = cv2.TM_SQDIFF_NORMED
+        invert = False
+        if mean > 65:
+            tmpl[:] = cv2.bitwise_not(tmpl)
+            invert = True
+        return m, invert
 
-    # ===== Metrics =====
-    confidence_sum = 0.0
-    valid_frames = 0
-    lost_frames = 0
-    total_frames = 0
+    method, invert_template = choose_method(template)
+
+    frame_idx = 0
+    start_time = time.time()
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
 
-        total_frames += 1
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         x1 = max(x - search_expansion, 0)
@@ -140,68 +181,84 @@ def run_tracker(video_path, bbox, video_out_path):
         x2 = min(x + w + search_expansion, W)
         y2 = min(y + h + search_expansion, H)
 
-        search = gray[y1:y2, x1:x2]
-        res = cv2.matchTemplate(search, template, method)
-        _, confidence, _, best_loc = cv2.minMaxLoc(res)
+        search_region = gray[y1:y2, x1:x2]
+        if invert_template:
+            search_region = cv2.bitwise_not(search_region)
+
+        res = cv2.matchTemplate(search_region, template, method)
+
+        if method in (cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED):
+            min_val, _, min_loc, _ = cv2.minMaxLoc(res)
+            confidence = 1.0 - min_val
+            best_loc = min_loc
+        else:
+            _, max_val, _, max_loc = cv2.minMaxLoc(res)
+            confidence = max_val
+            best_loc = max_loc
 
         if confidence >= confidence_thr:
+            search_expansion = 80
             x = x1 + best_loc[0]
             y = y1 + best_loc[1]
-            confidence_sum += confidence
-            valid_frames += 1
         else:
-            lost_frames += 1
+            search_expansion = min(search_expansion + 10, 150)
 
-        cv2.rectangle(frame, (x, y), (x+w, y+h), (0,0,255), 2)
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 3)
+
         cx, cy = x + w//2, y + h//2
-        cv2.circle(frame, (cx, cy), w//5, (0,0,255), 2)
+        cross = max(5, w // 8)
+        radius = max(8, w // 6)
+
+        cv2.line(frame, (cx-cross, cy), (cx+cross, cy), (0,0,255), 2)
+        cv2.line(frame, (cx, cy-cross), (cx, cy+cross), (0,0,255), 2)
+        cv2.circle(frame, (cx, cy), radius, (0,0,255), 2)
+
+        cv2.putText(frame, "Military Vehicle Targeted Successfully.", (x, y-35),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,255), 2)
+        cv2.putText(frame, "FPV Drone AIM Locked.", (x, y+h+25),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,255), 2)
+
+        elapsed = time.time() - start_time
+        fps_disp = frame_idx / max(elapsed, 1e-5)
+        cv2.putText(frame, f"FPS: {fps_disp:.2f}", (10,30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0), 2)
+
+        if frame_idx % update_every_n == 0:
+            template = cv2.cvtColor(frame[y:y+h, x:x+w], cv2.COLOR_BGR2GRAY)
+            method, invert_template = choose_method(template)
 
         out.write(frame)
+        frame_idx += 1
 
     cap.release()
     out.release()
+    return video_out_path
 
-    avg_conf = confidence_sum / max(valid_frames, 1)
-    success_rate = (valid_frames / max(total_frames, 1)) * 100
-
-    return video_out_path, avg_conf, lost_frames, success_rate
-
-# ===================== EXECUTION =====================
 if uploaded_video and start_btn:
-    filename = user_filename.strip()
-    if not filename.endswith(".mp4"):
-        filename += ".mp4"
 
-    out_path = os.path.join(tempfile.gettempdir(), filename)
+    download_name = user_filename.strip()
+    if not download_name.endswith(".mp4"):
+        download_name += ".mp4"
+
+    video_out_path = os.path.join(tempfile.gettempdir(), download_name)
 
     with st.spinner("Processing video..."):
-        output_path, avg_conf, lost_frames, success_rate = run_tracker(
+        output_path = run_tracker(
             temp_vid.name,
-            (x, y, w, h),
-            out_path
+            bbox=(x, y, w, h),
+            video_out_path=video_out_path
         )
 
-    st.success("Tracking completed successfully!")
+    st.success(f"Tracking completed successfully! Output file: {download_name}")
 
-    # ===== VIDEO =====
-    st.subheader("🎬 Output Tracked Video")
-    with open(output_path, "rb") as f:
-        st.video(f.read())
-
-    # ===== METRICS =====
-    st.subheader("📊 Tracking Performance Metrics")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Avg Confidence", f"{avg_conf:.2f}")
-    c2.metric("Target Lost Frames", lost_frames)
-    c3.metric("Tracking Success Rate", f"{success_rate:.1f}%")
-
-    # ===== DOWNLOAD =====
     with open(output_path, "rb") as f:
         st.download_button(
-            "⬇ Download Output Video",
+            label="⬇ Download Output Video",
             data=f,
-            file_name=filename,
+            file_name=download_name,
             mime="video/mp4"
         )
+
+    st.code(f"Output saved at:\n{output_path}")
 
 
