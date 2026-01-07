@@ -4,10 +4,11 @@ import numpy as np
 import time
 import os
 import tempfile
-
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Template-Based Tank Tracker", layout="centered")
-st.title("🎯 Military Object Tracking (Template Matching)")
+st.title("🎯 VisionLock - Military SOT System")
+st.markdown("🤖 Single Object Tracking System - Military Grade")
 st.write("Upload a video, provide initial bounding box, and get the tracked output.")
 
 st.markdown("""
@@ -24,8 +25,6 @@ st.markdown("""
 h1 { color: #FFD700; text-align: center; }
 </style>
 """, unsafe_allow_html=True)
-
-#############################################
 
 st.markdown("""
 <style>
@@ -47,7 +46,6 @@ with st.sidebar.expander("📌 Project Intro"):
     - Export the **processed tracking video** for analysis or portfolio use  
     """)
 
-
 with st.sidebar.expander("👨‍💻 Developers Name-ID"):
     st.markdown("""
     - **Rayyan Ahmed: 22F-BSAI-11**
@@ -66,12 +64,10 @@ with st.sidebar.expander("🛠️ Tech Stack Used"):
 - 🧪 **Python Standard Libraries** → Time measurement, file handling, temporary storage  
 """)
 
-
 #############################################
 
 uploaded_video = st.file_uploader("Upload video", type=["mp4", "avi", "mov"])
 
-import matplotlib.pyplot as plt
 
 if uploaded_video:
     st.subheader("📐 First Frame Reference (Use this to set Bounding Box)")
@@ -95,11 +91,9 @@ if uploaded_video:
         ax.set_ylabel("Y (pixels)")
         ax.set_title("First Frame with Pixel Grid")
 
-        # Grid every 50 pixels
         ax.set_xticks(np.arange(0, w_img, 50))
         ax.set_yticks(np.arange(0, h_img, 50))
         ax.grid(color="yellow", linestyle="--", linewidth=0.5, alpha=0.6)
-
         ax.imshow(frame0_rgb, origin="upper")
 
         st.pyplot(fig)
@@ -110,7 +104,6 @@ if uploaded_video:
         )
     else:
         st.error("Could not read first frame from video.")
-
 
 st.subheader("Initial Bounding Box (pixels)")
 col1, col2, col3, col4 = st.columns(4)
@@ -128,16 +121,9 @@ user_filename = st.text_input(
     value="tracked_video"
 )
 
-download_name = user_filename.strip()
-if not download_name.endswith(".mp4"):
-    download_name += ".mp4"
-
-video_out_path = os.path.join(tempfile.gettempdir(), download_name)
-
 start_btn = st.button("🚀 Start Tracking")
 
 def run_tracker(video_path, bbox, video_out_path):
-
     search_expansion = 80
     confidence_thr = 0.55
     update_every_n = 10
@@ -164,17 +150,14 @@ def run_tracker(video_path, bbox, video_out_path):
     def choose_method(tmpl):
         mean, std = cv2.meanStdDev(tmpl)
         mean, std = float(mean), float(std)
-
         if std < 140:
             m = cv2.TM_CCOEFF_NORMED
         else:
             m = cv2.TM_SQDIFF_NORMED
-
         invert = False
         if mean > 65:
             tmpl[:] = cv2.bitwise_not(tmpl)
             invert = True
-
         return m, invert
 
     method, invert_template = choose_method(template)
@@ -195,7 +178,6 @@ def run_tracker(video_path, bbox, video_out_path):
         y2 = min(y + h + search_expansion, H)
 
         search_region = gray[y1:y2, x1:x2]
-
         if invert_template:
             search_region = cv2.bitwise_not(search_region)
 
@@ -227,7 +209,7 @@ def run_tracker(video_path, bbox, video_out_path):
         cv2.line(frame, (cx, cy-cross), (cx, cy+cross), (0,0,255), 2)
         cv2.circle(frame, (cx, cy), radius, (0,0,255), 2)
 
-        cv2.putText(frame, "Tank targeted successfully.", (x, y-35),
+        cv2.putText(frame, "Military Vehicle Targeted Successfully.", (x, y-35),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,255), 2)
         cv2.putText(frame, "FPV Drone AIM Locked.", (x, y+h+25),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,255), 2)
@@ -248,20 +230,22 @@ def run_tracker(video_path, bbox, video_out_path):
     out.release()
     return video_out_path
 
-
 if uploaded_video and start_btn:
-    with st.spinner("Processing video..."):
-        
-        output_path = run_tracker(
-            temp_vid.name,   
-            bbox=(x, y, w, h)
-        )
-
-    st.success("Tracking completed successfully!")
 
     download_name = user_filename.strip()
     if not download_name.endswith(".mp4"):
         download_name += ".mp4"
+
+    video_out_path = os.path.join(tempfile.gettempdir(), download_name)
+
+    with st.spinner("Processing video..."):
+        output_path = run_tracker(
+            temp_vid.name,
+            bbox=(x, y, w, h),
+            video_out_path=video_out_path
+        )
+
+    st.success(f"Tracking completed successfully! Output file: {download_name}")
 
     with open(output_path, "rb") as f:
         st.download_button(
@@ -274,4 +258,4 @@ if uploaded_video and start_btn:
     st.code(f"Output saved at:\n{output_path}")
 
 
-       
+
