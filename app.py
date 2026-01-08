@@ -6,9 +6,13 @@ import os
 import tempfile
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Template-Based Tank Tracker", layout="centered")
-st.title("🎯 VisionLock - Military SOT System")
-st.markdown("🤖 Single Object Tracking System - Military Grade")
+st.set_page_config(page_title="VisionLock | Military Single Object Tracking System", layout="centered")
+st.title("🎯 VisionLock: Military-Grade Single Object Tracking System")
+st.markdown("""
+**VisionLock** is a real-time computer vision system designed for  
+**precision tracking of military ground targets** using adaptive template matching.
+""")
+
 st.write("Upload a video, provide initial bounding box, and get the tracked output.")
 
 st.markdown("""
@@ -256,6 +260,3 @@ if uploaded_video and start_btn:
         )
 
     st.code(f"Output saved at:\n{output_path}")
-
-
-
